@@ -279,6 +279,17 @@
           <version>0.12.1</version>
           <scope>test</scope>
        </dependency>
+        <dependency>
+            <groupId>io.fabric8</groupId>
+            <artifactId>agent-bond-agent</artifactId>
+            <version>${version.agent-bond}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
     </dependencies>
 
     <properties>
@@ -395,6 +406,9 @@
         <client2.alias>client2</client2.alias>
         <client.keystore>${project.build.testOutputDirectory}/keystore_client.jks</client.keystore>
         <cluster.keystore>${project.build.testOutputDirectory}/cluster.jks</cluster.keystore>
+
+        <!-- jolokia, agent bond -->
+        <agentBond>-javaagent:${settings.localRepository}/io/fabric8/agent-bond-agent/${version.agent-bond}/agent-bond-agent-${version.agent-bond}.jar=${project.build.testOutputDirectory}/agent.conf</agentBond>
     </properties>
 
     <build>
