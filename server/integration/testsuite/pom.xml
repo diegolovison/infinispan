@@ -408,7 +408,8 @@
         <cluster.keystore>${project.build.testOutputDirectory}/cluster.jks</cluster.keystore>
 
         <!-- jolokia, agent bond -->
-        <agentBond>-javaagent:${settings.localRepository}/io/fabric8/agent-bond-agent/${version.agent-bond}/agent-bond-agent-${version.agent-bond}.jar=${project.build.testOutputDirectory}/agent.conf</agentBond>
+        <agent.bond>-javaagent:${server1.dist}/modules/system/layers/base/io/fabric8/agent-bond/main/agent-bond-agent-${version.agent-bond}.jar=${project.build.testOutputDirectory}/agent.conf</agent.bond>
+        <jboss.logmanager.lib>${server1.dist}/modules/system/layers/base/org/jboss/logmanager/main/jboss-logmanager-${version.jboss.logmanager}.jar</jboss.logmanager.lib>
     </properties>
 
     <build>
