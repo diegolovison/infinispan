@@ -338,11 +338,11 @@ public class EndpointInteroperabilityTest extends AbstractInfinispanTest {
       String key = "a-1";
       String value = "<foo><bar/><foo>";
 
-      defaultMarshalledRemoteCache.put(key, value);
-      assertEquals(value, (String)  defaultMarshalledRemoteCache.get(key));
+      stringRemoteCache.put(key, value);
+      assertEquals(value, stringRemoteCache.get(key));
 
       HttpMethod response = new RestRequest()
-            .cache(MARSHALLED_CACHE_NAME)
+            .cache(STRING_CACHE_NAME)
             .key(key).accept("text/plain;q=0.7, application/xml;q=0.8, */*;q=0.6")
             .readResponse();
 
