@@ -332,6 +332,23 @@ public class EndpointInteroperabilityTest extends AbstractInfinispanTest {
       assertArrayEquals((byte[]) bytesFromRest, value);
    }
 
+   @Test
+   public void testAcceptHeader() throws Exception {
+
+      String key = "a-1";
+      String value = "<foo><bar/><foo>";
+
+      defaultMarshalledRemoteCache.put(key, value);
+      assertEquals(value, (String)  defaultMarshalledRemoteCache.get(key));
+
+      HttpMethod response = new RestRequest()
+            .cache(MARSHALLED_CACHE_NAME)
+            .key(key).accept("text/plain;q=0.7, application/xml;q=0.8, */*;q=0.6")
+            .readResponse();
+
+      assertEquals(response.getResponseHeader("content-type").getValue(), "application/xml");
+   }
+
    String getEndpoint(String cache) {
       return String.format("http://localhost:%s/rest/%s", restServer.getPort(), cache);
    }
@@ -348,7 +365,7 @@ public class EndpointInteroperabilityTest extends AbstractInfinispanTest {
       private Object key;
       private Object value;
       private String keyContentType;
-      private MediaType accept;
+      private Object accept;
       private String contentType;
 
       public RestRequest cache(String cacheName) {
@@ -384,7 +401,7 @@ public class EndpointInteroperabilityTest extends AbstractInfinispanTest {
          return this;
       }
 
-      public RestRequest accept(MediaType valueContentType) {
+      public RestRequest accept(Object valueContentType) {
          this.accept = valueContentType;
          return this;
       }
@@ -406,7 +423,8 @@ public class EndpointInteroperabilityTest extends AbstractInfinispanTest {
          assertEquals(post.getStatusCode(), HttpStatus.SC_OK);
       }
 
-      public Object read() throws IOException {
+      public HttpMethod readResponse() throws IOException {
+
          HttpMethod get = new GetMethod(getEndpoint(this.cacheName) + "/" + this.key);
          if (this.accept != null) {
             get.setRequestHeader(ACCEPT, this.accept.toString());
@@ -415,6 +433,11 @@ public class EndpointInteroperabilityTest extends AbstractInfinispanTest {
             get.setRequestHeader("Key-Content-Type", this.keyContentType);
          }
          restClient.executeMethod(get);
+         return get;
+      }
+
+      public Object read() throws IOException {
+         HttpMethod get = readResponse();
          assertEquals(get.getStatusCode(), HttpStatus.SC_OK);
          return get.getResponseBody();
       }
