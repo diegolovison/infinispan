@@ -437,6 +437,20 @@ public class ConfigurationTest {
       builder.build();
    }
 
+   @Test(expectedExceptions = CacheConfigurationException.class)
+   public void testInvalidServersEmptyStringBegin() {
+      ConfigurationBuilder builder = new ConfigurationBuilder();
+      builder.addServers(" ;host1:11222; host2:11222;");
+      builder.build();
+   }
+
+   @Test(expectedExceptions = CacheConfigurationException.class)
+   public void testInvalidServersEmptyStringEnd() {
+      ConfigurationBuilder builder = new ConfigurationBuilder();
+      builder.addServers("host1:11222; host2:11222; ");
+      builder.build();
+   }
+
    public void testValidAuthenticationSubjectNoCBH() {
       ConfigurationBuilder builder = new ConfigurationBuilder();
       builder.security().authentication().enable().saslMechanism("PLAIN").clientSubject(new Subject());
