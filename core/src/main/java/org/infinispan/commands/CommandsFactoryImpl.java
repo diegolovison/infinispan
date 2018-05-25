@@ -220,9 +220,10 @@ public class CommandsFactoryImpl implements CommandsFactory {
    }
 
    private int getSegment(Object key) {
-      if (cacheMode.needsStateTransfer()) {
-         return keyPartitioner.getSegment(key);
-      }
+      // Testing the cost of the invocations here
+//      if (cacheMode.needsStateTransfer()) {
+//         return keyPartitioner.getSegment(key);
+//      }
       // LOCAL and INVAL don't require segments, so just use 0
       return 0;
    }
