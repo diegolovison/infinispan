@@ -10,6 +10,7 @@ import org.infinispan.test.fwk.TestResourceTrackingListener;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.testng.Arquillian;
 import org.jboss.shrinkwrap.api.Archive;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -22,6 +23,11 @@ import org.testng.annotations.Test;
 @Listeners(TestResourceTrackingListener.class)
 @Test(groups = "functional", testName = "cdi.test.cachemanager.embedded.xml.XMLConfiguredCacheContainerTest")
 public class XMLConfiguredCacheContainerTest extends Arquillian {
+
+   @BeforeClass
+   public void beforeClass() {
+      throw new IllegalStateException("Fixed issue");
+   }
 
    @Deployment
    public static Archive<?> deployment() {

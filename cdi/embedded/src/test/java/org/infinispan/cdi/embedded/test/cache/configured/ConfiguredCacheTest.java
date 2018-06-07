@@ -10,6 +10,7 @@ import org.infinispan.cdi.embedded.test.testutil.Deployments;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.testng.Arquillian;
 import org.jboss.shrinkwrap.api.Archive;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 /**
@@ -21,6 +22,11 @@ import org.testng.annotations.Test;
  */
 @Test(groups = {"functional", "smoke"}, testName = "cdi.test.cache.embedded.configured.ConfiguredCacheTest")
 public class ConfiguredCacheTest extends Arquillian {
+
+   @BeforeClass
+   public void beforeClass() {
+      throw new IllegalStateException("Fixed issue");
+   }
 
    @Deployment
    public static Archive<?> deployment() {

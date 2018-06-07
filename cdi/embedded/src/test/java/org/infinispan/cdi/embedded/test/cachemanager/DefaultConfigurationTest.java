@@ -15,6 +15,7 @@ import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.testng.Arquillian;
 import org.jboss.shrinkwrap.api.Archive;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 /**
@@ -24,6 +25,11 @@ import org.testng.annotations.Test;
  */
 @Test(groups = "functional", testName = "cdi.test.cachemanager.embedded.DefaultConfigurationTest")
 public class DefaultConfigurationTest extends Arquillian {
+
+   @BeforeClass
+   public void beforeClass() {
+      throw new IllegalStateException("Fixed issue");
+   }
 
    @Deployment
    public static Archive<?> deployment() {
