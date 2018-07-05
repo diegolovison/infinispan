@@ -3,7 +3,7 @@
    <modelVersion>4.0.0</modelVersion>
    <groupId>org.infinispan</groupId>
    <artifactId>infinispan-parent</artifactId>
-   <version>9.3.0-SNAPSHOT</version>
+   <version>9.4.0-SNAPSHOT</version>
    <packaging>pom</packaging>
    <name>Infinispan Common Parent</name>
    <description>Infinispan common parent POM module</description>
@@ -159,9 +159,9 @@
       <infinispan.brand.name>Infinispan</infinispan.brand.name>
       <infinispan.brand.prefix>infinispan</infinispan.brand.prefix>
       <infinispan.brand.version>${project.version}</infinispan.brand.version>
-      <infinispan.codename>Estrella Galicia</infinispan.codename>
+      <infinispan.codename>WIP</infinispan.codename>
       <infinispan.module.slot.prefix>ispn</infinispan.module.slot.prefix>
-      <infinispan.base.version>9.3</infinispan.base.version>
+      <infinispan.base.version>9.4</infinispan.base.version>
       <infinispan.module.slot>${infinispan.module.slot.prefix}-${infinispan.base.version}</infinispan.module.slot>
       <infinispan.core.schema.version>${infinispan.base.version}</infinispan.core.schema.version>
 
@@ -278,7 +278,7 @@
       <version.hibernate_dep.jandex>2.0.3.Final</version.hibernate_dep.jandex>
       <version.hibernate_dep.javassist>3.22.0-GA</version.hibernate_dep.javassist>
       <version.howl>1.0.1-1</version.howl>
-      <version.jackson>1.9.13</version.jackson>
+      <version.jackson>2.9.5</version.jackson>
       <version.jacoco>0.7.5.201505241946</version.jacoco>
       <version.javax.cache>1.1.0</version.javax.cache>
       <version.javax.cache.cache-tests>${version.javax.cache}</version.javax.cache.cache-tests>
@@ -654,13 +654,18 @@
             <version>${version.avro}</version>
          </dependency>
          <dependency>
-            <groupId>org.codehaus.jackson</groupId>
-            <artifactId>jackson-core-asl</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
             <version>${version.jackson}</version>
          </dependency>
          <dependency>
-            <groupId>org.codehaus.jackson</groupId>
-            <artifactId>jackson-mapper-asl</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${version.jackson}</version>
+         </dependency>
+         <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
             <version>${version.jackson}</version>
          </dependency>
          <dependency>
@@ -930,7 +935,7 @@
                   <groupId>jfree</groupId>
                </exclusion>
                <exclusion>
-                  <artifactId>jboss-transaction-api_1.1_spec</artifactId>
+                  <artifactId>jboss-transaction-api_1.2_spec</artifactId>
                   <groupId>org.jboss.spec.javax.transaction</groupId>
                </exclusion>
                <exclusion>
@@ -1035,6 +1040,12 @@
             <artifactId>geronimo-transaction</artifactId>
             <version>${version.geronimo.tm}</version>
             <scope>test</scope>
+            <exclusions>
+               <exclusion>
+                  <groupId>org.apache.geronimo.specs</groupId>
+                  <artifactId>geronimo-jta_1.1_spec</artifactId>
+               </exclusion>
+            </exclusions>
          </dependency>
          <dependency>
             <groupId>org.objectweb.howl</groupId>

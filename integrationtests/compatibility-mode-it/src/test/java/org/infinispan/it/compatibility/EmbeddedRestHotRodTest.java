@@ -29,8 +29,6 @@ import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.HeadMethod;
 import org.apache.commons.httpclient.methods.InputStreamRequestEntity;
 import org.apache.commons.httpclient.methods.PutMethod;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
 import org.infinispan.client.hotrod.Flag;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.commons.dataconversion.IdentityEncoder;
@@ -41,6 +39,9 @@ import org.infinispan.test.AbstractInfinispanTest;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * Test compatibility between embedded caches, Hot Rod, and REST endpoints.
@@ -61,6 +62,7 @@ public class EmbeddedRestHotRodTest extends AbstractInfinispanTest {
    protected void setup() throws Exception {
       cacheFactory = new CompatibilityCacheFactory<String, Object>(CacheMode.LOCAL).setup();
       dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+      cacheFactory.addRegexWhiteList("org.infinispan.*Person");
    }
 
    @AfterClass
@@ -74,19 +76,17 @@ public class EmbeddedRestHotRodTest extends AbstractInfinispanTest {
       // 1. Put with REST
       EntityEnclosingMethod put = new PutMethod(cacheFactory.getRestUrl() + "/" + key);
       put.setRequestEntity(new ByteArrayRequestEntity(
-            "<hey>ho</hey>".getBytes(), MediaType.APPLICATION_OCTET_STREAM_TYPE));
+            "<hey>ho</hey>".getBytes(), MediaType.TEXT_PLAIN_TYPE));
       HttpClient restClient = cacheFactory.getRestClient();
       restClient.executeMethod(put);
       assertEquals(HttpStatus.SC_OK, put.getStatusCode());
       assertEquals("", put.getResponseBodyAsString().trim());
 
       // 2. Get with Embedded
-      assertArrayEquals("<hey>ho</hey>".getBytes(), (byte[])
-            cacheFactory.getEmbeddedCache().get(key));
+      assertEquals("<hey>ho</hey>", cacheFactory.getEmbeddedCache().get(key));
 
       // 3. Get with Hot Rod
-      assertArrayEquals("<hey>ho</hey>".getBytes(), (byte[])
-            cacheFactory.getHotRodCache().get(key));
+      assertEquals("<hey>ho</hey>", cacheFactory.getHotRodCache().get(key));
    }
 
    public void testEmbeddedPutRestHotRodGet() throws Exception {

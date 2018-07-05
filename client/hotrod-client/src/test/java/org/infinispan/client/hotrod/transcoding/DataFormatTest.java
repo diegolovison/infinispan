@@ -15,7 +15,6 @@ import static org.testng.internal.junit.ArrayAsserts.assertArrayEquals;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,16 +25,13 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.TextNode;
 import org.infinispan.client.hotrod.DataFormat;
 import org.infinispan.client.hotrod.MetadataValue;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
-import org.infinispan.client.hotrod.annotation.ClientListener;
 import org.infinispan.client.hotrod.event.EventLogListener;
+import org.infinispan.client.hotrod.event.EventLogListener.RawStaticFilteredEventLogListener;
 import org.infinispan.client.hotrod.event.EventLogListener.StaticFilteredEventLogListener;
-import org.infinispan.client.hotrod.event.IncorrectClientListenerException;
 import org.infinispan.client.hotrod.test.HotRodClientTestingUtil;
 import org.infinispan.client.hotrod.test.SingleHotRodServerTest;
 import org.infinispan.commons.dataconversion.MediaType;
@@ -45,16 +41,14 @@ import org.infinispan.commons.marshall.AbstractMarshaller;
 import org.infinispan.commons.marshall.IdentityMarshaller;
 import org.infinispan.commons.marshall.UTF8StringMarshaller;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
-import org.infinispan.filter.NamedFactory;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.infinispan.marshall.core.ExternallyMarshallable;
-import org.infinispan.metadata.Metadata;
-import org.infinispan.notifications.cachelistener.filter.CacheEventFilter;
-import org.infinispan.notifications.cachelistener.filter.CacheEventFilterFactory;
-import org.infinispan.notifications.cachelistener.filter.EventType;
 import org.infinispan.server.hotrod.HotRodServer;
 import org.infinispan.server.hotrod.configuration.HotRodServerConfigurationBuilder;
 import org.testng.annotations.Test;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.TextNode;
 
 /**
  * Tests for the Hot Rod client using multiple data formats when interacting with the server.
@@ -90,7 +84,8 @@ public class DataFormatTest extends SingleHotRodServerTest {
    @Override
    protected HotRodServer createHotRodServer() {
       HotRodServer server = HotRodClientTestingUtil.startHotRodServer(cacheManager, new HotRodServerConfigurationBuilder());
-      server.addCacheEventFilterFactory("raw-filter-factory", new RawFilterFactory());
+      server.addCacheEventFilterFactory("static-filter-factory", new EventLogListener.StaticCacheEventFilterFactory(42));
+      server.addCacheEventFilterFactory("raw-static-filter-factory", new EventLogListener.RawStaticCacheEventFilterFactory());
       return server;
    }
 
@@ -172,6 +167,7 @@ public class DataFormatTest extends SingleHotRodServerTest {
    @Test
    public void testKeysInMultipleFormats() throws Exception {
       remoteCache.clear();
+      cacheManager.getClassWhiteList().addRegexps(".*SocketAddress");
       InetSocketAddress value = InetSocketAddress.createUnresolved("infinispan.org", 8080);
 
       // Write using String using default Marshaller
@@ -227,6 +223,8 @@ public class DataFormatTest extends SingleHotRodServerTest {
    public void testBatchOperations() {
       remoteCache.clear();
 
+      cacheManager.getClassWhiteList().addClasses(ComplexKey.class);
+
       Map<ComplexKey, String> entries = new HashMap<>();
       IntStream.range(0, 50).forEach(i -> {
          ComplexKey key = new ComplexKey(String.valueOf(i), (float) i);
@@ -275,56 +273,34 @@ public class DataFormatTest extends SingleHotRodServerTest {
       });
    }
 
-   @Test(expectedExceptions = IncorrectClientListenerException.class)
+   @Test
    public void testNonRawFilteredListeners() {
-      // Currently the Hot Rod server maintain a single marshaller for all events of all caches. Until this is fixed,
-      // throw an exception when trying to add filtered listeners with custom data formats.
-      RemoteCache<?, ?> remoteCache = this.remoteCache.withDataFormat(DataFormat.builder().valueType(TEXT_PLAIN).build());
-      StaticFilteredEventLogListener<?> l = new StaticFilteredEventLogListener<>(remoteCache);
-      remoteCache.addClientListener(l);
+      remoteCache.clear();
+      RemoteCache<Integer, String> remoteCache = this.remoteCache.withDataFormat(DataFormat.builder().valueType(TEXT_PLAIN).build());
+      StaticFilteredEventLogListener<Integer> l = new StaticFilteredEventLogListener<>(remoteCache);
+      withClientListener(l, remote -> {
+         remoteCache.put(1, "value1");
+         l.expectNoEvents();
+         remoteCache.put(42, "value2");
+         l.expectOnlyCreatedEvent(42);
+      });
    }
 
    @Test
    public void testRawFilteredListeners() {
       remoteCache.clear();
 
-      RemoteCache<Object, Object> remoteCache = this.remoteCache
+      RemoteCache<Object, Object> jsonCache = this.remoteCache
             .withDataFormat(DataFormat.builder().keyType(APPLICATION_JSON).keyMarshaller(new UTF8StringMarshaller()).build());
 
-      RawFilterFactoryListener<Object> l = new RawFilterFactoryListener<>(remoteCache);
+      RawStaticFilteredEventLogListener<Object> l = new RawStaticFilteredEventLogListener<>(jsonCache);
 
       withClientListener(l, remote -> {
-         this.remoteCache.put("1", UUID.randomUUID());
+         jsonCache.put("1", UUID.randomUUID());
          l.expectNoEvents();
-         this.remoteCache.put("2", UUID.randomUUID());
-         l.expectOnlyCreatedEvent("\"2\"");
+         jsonCache.put("2", UUID.randomUUID());
+         l.expectOnlyCreatedEvent("2");
       });
-   }
-
-   @NamedFactory(name = "raw-filter-factory")
-   @SuppressWarnings("unchecked")
-   public static class RawFilterFactory implements CacheEventFilterFactory {
-      @Override
-      public CacheEventFilter<byte[], byte[]> getFilter(final Object[] params) {
-         return new RawFilter();
-      }
-
-      static class RawFilter implements CacheEventFilter<byte[], byte[]>, Serializable {
-         final byte[] magicKey = "\"2\"".getBytes(UTF_8);// JSON "2" literal
-
-         @Override
-         public boolean accept(byte[] key, byte[] previousValue, Metadata previousMetadata, byte[] value,
-                               Metadata metadata, EventType eventType) {
-            return Arrays.equals(key, magicKey);
-         }
-      }
-   }
-
-   @ClientListener(filterFactoryName = "raw-filter-factory", useRawData = true)
-   public static class RawFilterFactoryListener<K> extends EventLogListener<K> {
-      RawFilterFactoryListener(RemoteCache<K, ?> r) {
-         super(r);
-      }
    }
 
    private byte[] marshall(Object o) throws Exception {

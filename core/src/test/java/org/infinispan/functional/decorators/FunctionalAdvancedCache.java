@@ -65,8 +65,8 @@ import org.infinispan.partitionhandling.AvailabilityMode;
 import org.infinispan.remoting.rpc.RpcManager;
 import org.infinispan.security.AuthorizationManager;
 import org.infinispan.stats.Stats;
-import org.infinispan.util.AbstractDelegatingCollection;
-import org.infinispan.util.AbstractDelegatingSet;
+import org.infinispan.commons.util.AbstractDelegatingCollection;
+import org.infinispan.commons.util.AbstractDelegatingSet;
 import org.infinispan.util.concurrent.locks.LockManager;
 
 public final class FunctionalAdvancedCache<K, V> implements AdvancedCache<K, V> {
@@ -783,6 +783,10 @@ public final class FunctionalAdvancedCache<K, V> implements AdvancedCache<K, V> 
                                        CacheEventFilter<? super K, ? super V> filter, CacheEventConverter<? super K, ? super V, C> converter,
                                        Set<Class<? extends Annotation>> filterAnnotations) {
       // TODO: Customise this generated block
+   }
+
+   @Override
+   public <C> void addStorageFormatFilteredListener(Object listener, CacheEventFilter<? super K, ? super V> filter, CacheEventConverter<? super K, ? super V, C> converter, Set<Class<? extends Annotation>> filterAnnotations) {
    }
 
    public static <T> T await(CompletableFuture<T> cf) {

@@ -4,7 +4,7 @@
    <parent>
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-parent</artifactId>
-      <version>9.3.0-SNAPSHOT</version>
+      <version>9.4.0-SNAPSHOT</version>
       <relativePath>../../pom.xml</relativePath>
    </parent>
 
@@ -33,8 +33,8 @@
          <artifactId>antlr-runtime</artifactId>
       </dependency>
       <dependency>
-         <groupId>org.codehaus.jackson</groupId>
-         <artifactId>jackson-mapper-asl</artifactId>
+         <groupId>com.fasterxml.jackson.core</groupId>
+         <artifactId>jackson-databind</artifactId>
       </dependency>
       <dependency>
          <groupId>org.infinispan</groupId>
