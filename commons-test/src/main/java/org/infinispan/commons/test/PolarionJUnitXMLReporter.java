@@ -15,6 +15,11 @@ import org.testng.reporters.JUnitReportReporter;
 public class PolarionJUnitXMLReporter extends JUnitReportReporter {
 
    @Override
+   protected String getFileName(Class cls) {
+      return "JDG-" + super.getFileName(cls);
+   }
+
+   @Override
    protected String getTestName(ITestResult res) {
       StringBuilder result = new StringBuilder(res.getMethod().getMethodName());
       if (res.getMethod().getConstructorOrMethod().getMethod().isAnnotationPresent(Test.class)) {
