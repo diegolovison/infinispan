@@ -112,11 +112,7 @@
                   <log4j.configurationFile>${log4j.configurationFile}</log4j.configurationFile>
                   <build.directory>${project.build.directory}</build.directory>
                </systemPropertyVariables>
-               <properties combine.self="override">
-                  <usedefaultlisteners>false</usedefaultlisteners>
-                  <listener>${junitListener}</listener>
-               </properties>
-               <disableXmlReport>false</disableXmlReport>
+               <disableXmlReport>true</disableXmlReport>
             </configuration>
             <dependencies>
                <dependency>

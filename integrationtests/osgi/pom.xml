@@ -307,13 +307,8 @@
                <runOrder>alphabetical</runOrder>
                <skipTests>${skipOSGiTests}</skipTests>
                <failIfNoTests>false</failIfNoTests>
-               <testNGArtifactName>none:none</testNGArtifactName>
-               <disableXmlReport>false</disableXmlReport>
+               <disableXmlReport>true</disableXmlReport>
                <runOrder>alphabetical</runOrder>
-               <properties>
-                  <usedefaultlisteners>false</usedefaultlisteners>
-                  <listener>${junitListener}</listener>
-               </properties>
                <argLine>${forkJvmArgs} ${testjvm.jigsawArgs}</argLine>
             </configuration>
             <dependencies>
