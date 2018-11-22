@@ -17,7 +17,7 @@ public class ClientStatistics implements RemoteCacheClientStatisticsMXBean {
    private final TimeService timeService;
    private StripedCounters<StripeB> counters = new StripedCounters<>(StripeC::new);
 
-   ClientStatistics(boolean enabled, TimeService timeService, NearCacheService nearCacheService) {
+   public ClientStatistics(boolean enabled, TimeService timeService, NearCacheService nearCacheService) {
       this.enabled = enabled;
       this.timeService = timeService;
       this.nearCacheService = nearCacheService;
@@ -25,7 +25,7 @@ public class ClientStatistics implements RemoteCacheClientStatisticsMXBean {
          nearCacheService.setInvalidationCallback(() -> incrementNearCacheInvalidations());
    }
 
-   ClientStatistics(boolean enabled, TimeService timeService) {
+   public ClientStatistics(boolean enabled, TimeService timeService) {
       this(enabled, timeService, null);
    }
 
