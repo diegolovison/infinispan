@@ -7,6 +7,8 @@ import static org.testng.AssertJUnit.assertNotNull;
 import static org.testng.AssertJUnit.assertTrue;
 
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -18,18 +20,19 @@ import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.infinispan.configuration.global.GlobalConfiguration;
 import org.infinispan.configuration.global.GlobalConfigurationBuilder;
 import org.infinispan.manager.DefaultCacheManager;
-import org.infinispan.persistence.spi.MarshallableEntry;
 import org.infinispan.persistence.async.AdvancedAsyncCacheWriter;
 import org.infinispan.persistence.dummy.DummyInMemoryStore;
 import org.infinispan.persistence.dummy.DummyInMemoryStoreConfigurationBuilder;
 import org.infinispan.persistence.manager.PersistenceManager;
 import org.infinispan.persistence.manager.PersistenceManagerImpl;
+import org.infinispan.persistence.spi.MarshallableEntry;
 import org.infinispan.persistence.spi.StoreUnavailableException;
 import org.infinispan.test.AbstractInfinispanTest;
 import org.infinispan.test.Exceptions;
 import org.infinispan.test.TestingUtil;
 import org.infinispan.test.fwk.CleanupAfterMethod;
 import org.infinispan.test.fwk.TestCacheManagerFactory;
+import org.junit.Assert;
 import org.testng.annotations.Test;
 
 @CleanupAfterMethod
@@ -116,10 +119,48 @@ public class WriteBehindFaultToleranceTest extends AbstractInfinispanTest {
       assertEquals(2, cache.get(1));
    }
 
+   /*
+   A custom writer that blocks in isAvailable() to check that the cache can read and write entries while its blocked
+    */
+   @Test
+   public void testLockStore() {
+      Cache<Object, Object> cache = createManagerAndGetCache(true, 1);
+      PollingPersistenceManager pm = new PollingPersistenceManager();
+      TestingUtil.replaceComponent(cache, PersistenceManager.class, pm, true);
+      AdvancedAsyncCacheWriter asyncWriter = TestingUtil.getFirstWriter(cache);
+      DummyInMemoryStore store = (DummyInMemoryStore) TestingUtil.extractField(AdvancedAsyncCacheWriter.class, asyncWriter, "actual");
+      // block pollStoreAvailability
+      pm.lockAvailabilityCheck();
+      store.setAvailable(false);
+      // Wait until the stores availability has been checked before asserting that the pm is still available
+      int pollCount = pm.pollCount.get();
+      eventually(() -> pm.pollCount.get() > pollCount, 10000);
+      cache.put(1, 1);
+      Assert.assertTrue(cache.get(1) != null);
+      pm.releaseAvailabilityCheck();
+      Assert.assertFalse(pm.locked);
+   }
+
    static class PollingPersistenceManager extends PersistenceManagerImpl {
+      final CountDownLatch latch = new CountDownLatch(1);
       final AtomicInteger pollCount = new AtomicInteger();
+      boolean locked = false;
+      protected void lockAvailabilityCheck() {
+         locked = true;
+      }
+      protected void releaseAvailabilityCheck() {
+         latch.countDown();
+      }
       @Override
       protected void pollStoreAvailability() {
+         if (locked) {
+            try {
+               latch.await(1, TimeUnit.MINUTES);
+            } catch (InterruptedException e) {
+               throw new IllegalStateException(e);
+            }
+            locked = false;
+         }
          super.pollStoreAvailability();
          pollCount.incrementAndGet();
       }
