@@ -134,7 +134,7 @@ public class WriteBehindFaultToleranceTest extends AbstractInfinispanTest {
       store.setAvailable(false);
       // Wait until the stores availability has been checked before asserting that the pm is still available
       int pollCount = pm.pollCount.get();
-      eventually(() -> pm.pollCount.get() > pollCount, 10000);
+      eventually(() -> pm.pollCount.get() > pollCount);
       cache.put(1, 1);
       Assert.assertTrue(cache.get(1) != null);
       pm.releaseAvailabilityCheck();
@@ -155,6 +155,8 @@ public class WriteBehindFaultToleranceTest extends AbstractInfinispanTest {
       protected void pollStoreAvailability() {
          if (locked) {
             try {
+               // when locked, we need to increment first
+               pollCount.incrementAndGet();
                latch.await(1, TimeUnit.MINUTES);
             } catch (InterruptedException e) {
                throw new IllegalStateException(e);
