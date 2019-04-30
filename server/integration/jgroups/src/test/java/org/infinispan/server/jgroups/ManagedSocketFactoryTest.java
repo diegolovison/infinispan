@@ -22,6 +22,7 @@
 package org.infinispan.server.jgroups;
 
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -58,6 +59,9 @@ public class ManagedSocketFactoryTest {
 
     @Test
     public void createSocket() throws IOException {
+
+        System.out.println(System.getProperty("java.version"));
+        assertTrue(System.getProperty("java.version").startsWith("1.8"));
 
         Socket socket1 = new Socket();
         Socket socket2 = new Socket();

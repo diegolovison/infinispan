@@ -148,6 +148,9 @@
                        <usedefaultlisteners>false</usedefaultlisteners>
                        <listener>${junitListener}</listener>
                     </properties>
+                    <!-- this is temporary hack to show the problem
+                    <jvm>${env.JAVA8_HOME}/bin/java</jvm>
+                    -->
                     <argLine>${forkJvmArgs} ${testjvm.jigsawArgs} -Djdk.attach.allowAttachSelf=true</argLine>
                 </configuration>
                 <dependencies>
