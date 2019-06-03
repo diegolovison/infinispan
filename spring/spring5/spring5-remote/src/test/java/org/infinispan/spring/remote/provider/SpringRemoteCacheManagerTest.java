@@ -5,6 +5,7 @@ import static org.testng.AssertJUnit.assertEquals;
 import static org.testng.AssertJUnit.assertFalse;
 import static org.testng.AssertJUnit.assertNotNull;
 import static org.testng.AssertJUnit.assertNotSame;
+import static org.testng.AssertJUnit.assertNull;
 import static org.testng.AssertJUnit.assertSame;
 import static org.testng.AssertJUnit.assertTrue;
 
@@ -189,6 +190,36 @@ public class SpringRemoteCacheManagerTest extends SingleCacheManagerTest {
       assertSame(
               "getCache() should have returned the same SpringCache instance for the same name",
               firstObtainedSpringCache, secondObtainedSpringCache);
+   }
+
+   @Test
+   public final void getCacheShouldReturnNullItWasChangedByRemoteCacheManager() {
+      // Given
+      objectUnderTest = new SpringRemoteCacheManager(remoteCacheManager);
+
+      // When
+      objectUnderTest.getCache(TEST_CACHE_NAME);
+      remoteCacheManager.administration().removeCache(TEST_CACHE_NAME);
+
+      // Then
+      assertNull(objectUnderTest.getCache(TEST_CACHE_NAME));
+   }
+
+   @Test
+   public final void getCacheShouldReturnDiffInstanceItWasChangedByRemoteCacheManager() {
+      // Given
+      objectUnderTest = new SpringRemoteCacheManager(remoteCacheManager);
+
+      // When
+      final SpringCache firstObtainedSpringCache = objectUnderTest.getCache(TEST_CACHE_NAME);
+      remoteCacheManager.administration().removeCache(TEST_CACHE_NAME);
+      remoteCacheManager.administration().createCache(TEST_CACHE_NAME, cacheManager.getDefaultCacheConfiguration());
+
+      // Then
+      final SpringCache secondObtainedSpringCache = objectUnderTest.getCache(TEST_CACHE_NAME);
+      assertNotSame(
+            "getCache() shouldn't have the same SpringCache instance for the same name because the config was changed",
+            firstObtainedSpringCache, secondObtainedSpringCache);
    }
 
    @Test
