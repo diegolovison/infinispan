@@ -1,0 +1,19 @@
+<RelayConfiguration xmlns="urn:jgroups:relay:1.0">
+    <sites>
+        <site name="LON" id="0">
+            <bridges>
+                <bridge config="${infinispan.server.config.path}/bridge.xml" name="global"/>
+            </bridges>
+        </site>
+        <site name="NYC" id="1">
+            <bridges>
+                <bridge config="${infinispan.server.config.path}/bridge.xml" name="global"/>
+            </bridges>
+        </site>
+        <site name="SFO" id="2">
+            <bridges>
+                <bridge name="global" config="${infinispan.server.config.path}/bridge.xml"/>
+            </bridges>
+        </site>
+    </sites>
+</RelayConfiguration>
