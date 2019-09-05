@@ -1,0 +1,3 @@
+<jgroups>
+    <stack-file name="xsite" extends="udp" path="test-jgroups-xsite.xml"/>
+</jgroups>
