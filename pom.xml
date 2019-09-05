@@ -161,8 +161,8 @@
    </modules>
    <properties>
       <!-- Semantic versioning defaults. -->
-      <bnd.consumer.policy>$&lt;range;[==,+)&gt;</bnd.consumer.policy>
-      <bnd.provider.policy>$&lt;range;[==,=+)&gt;</bnd.provider.policy>
+      <bnd.consumer.policy>$&lt;range;[==,+)></bnd.consumer.policy>
+      <bnd.provider.policy>$&lt;range;[==,=+)></bnd.provider.policy>
       <buildDirectory>target</buildDirectory>
       <defaultExcludedJUnitGroups>org.infinispan.commons.test.categories.Unstable,org.infinispan.commons.test.categories.Stress,org.infinispan.commons.test.categories.Profiling</defaultExcludedJUnitGroups>
       <!-- unstable and stress because we can have them inside a functional class, for example -->
@@ -173,7 +173,7 @@
       <dir.jacoco.merged>../jacoco/merged/</dir.jacoco.merged>
       <dir.jacoco.report>../jacoco/report/</dir.jacoco.report>
       <testjvm.commonArgs>-XX:+UseG1GC -XX:-TieredCompilation -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${user.dir} -Djboss.modules.settings.xml.url=${jboss.modules.settings.xml.url}</testjvm.commonArgs>
-      <testjvm.jigsawArgs />
+      <testjvm.jigsawArgs/>
       <forkJvmArgs>-Xmx1G ${testjvm.commonArgs}</forkJvmArgs>
       <server.jvm>${env.JAVA_HOME}</server.jvm>
       <server.jvm.args>${testjvm.commonArgs} ${testjvm.jigsawArgs}</server.jvm.args>
@@ -254,7 +254,7 @@
       <versionx.com.sun.xml.fastinfoset.FastInfoset>1.2.13</versionx.com.sun.xml.fastinfoset.FastInfoset>
       <versionx.com.tdunning.t-digest>3.0</versionx.com.tdunning.t-digest>
       <versionx.com.thoughtworks.paranamer.paranamer>2.3</versionx.com.thoughtworks.paranamer.paranamer>
-      <versionx.com.thoughtworks.xstream.xstream>1.4.10</versionx.com.thoughtworks.xstream.xstream>
+      <versionx.com.thoughtworks.xstream.xstream>1.4.11</versionx.com.thoughtworks.xstream.xstream>
       <versionx.commons-beanutils.commons-beanutils>1.9.3</versionx.commons-beanutils.commons-beanutils>
       <versionx.commons-cli.commons-cli>1.4</versionx.commons-cli.commons-cli>
       <versionx.commons-codec.commons-codec>1.10</versionx.commons-codec.commons-codec>
@@ -4664,8 +4664,7 @@
                   <configuration>
                      <target>
                         <property name="classpath" refid="maven.compile.classpath"/>
-                        <java classname="org.infinispan.commons.util.BlueprintGenerator" failonerror="true"
-                              fork="false">
+                        <java classname="org.infinispan.commons.util.BlueprintGenerator" failonerror="true" fork="false">
                            <arg value="${project.build.outputDirectory}"/>
                            <classpath>
                               <pathelement path="${project.build.outputDirectory}"/>
@@ -4759,7 +4758,7 @@
                                     </goals>
                                  </pluginExecutionFilter>
                                  <action>
-                                    <ignore />
+                                    <ignore/>
                                  </action>
                               </pluginExecution>
                               <pluginExecution>
@@ -4772,7 +4771,7 @@
                                     </goals>
                                  </pluginExecutionFilter>
                                  <action>
-                                    <ignore />
+                                    <ignore/>
                                  </action>
                               </pluginExecution>
                               <pluginExecution>
@@ -4788,7 +4787,7 @@
                                     </goals>
                                  </pluginExecutionFilter>
                                  <action>
-                                    <ignore />
+                                    <ignore/>
                                  </action>
                               </pluginExecution>
                               <pluginExecution>
@@ -4801,7 +4800,7 @@
                                     </goals>
                                  </pluginExecutionFilter>
                                  <action>
-                                    <ignore />
+                                    <ignore/>
                                  </action>
                               </pluginExecution>
                               <pluginExecution>
@@ -4814,7 +4813,7 @@
                                     </goals>
                                  </pluginExecutionFilter>
                                  <action>
-                                    <ignore />
+                                    <ignore/>
                                  </action>
                               </pluginExecution>
                               <pluginExecution>
@@ -4827,7 +4826,7 @@
                                     </goals>
                                  </pluginExecutionFilter>
                                  <action>
-                                    <ignore />
+                                    <ignore/>
                                  </action>
                               </pluginExecution>
                               <pluginExecution>
@@ -4840,7 +4839,7 @@
                                     </goals>
                                  </pluginExecutionFilter>
                                  <action>
-                                    <ignore />
+                                    <ignore/>
                                  </action>
                               </pluginExecution>
                               <pluginExecution>
@@ -4853,7 +4852,7 @@
                                     </goals>
                                  </pluginExecutionFilter>
                                  <action>
-                                    <ignore />
+                                    <ignore/>
                                  </action>
                               </pluginExecution>
                               <pluginExecution>
@@ -4866,7 +4865,7 @@
                                     </goals>
                                  </pluginExecutionFilter>
                                  <action>
-                                    <ignore />
+                                    <ignore/>
                                  </action>
                               </pluginExecution>
                               <pluginExecution>
@@ -4879,7 +4878,7 @@
                                     </goals>
                                  </pluginExecutionFilter>
                                  <action>
-                                    <ignore />
+                                    <ignore/>
                                  </action>
                               </pluginExecution>
                            </pluginExecutions>
@@ -4961,7 +4960,7 @@
                               <echo message="Uploading Schema files to ${upload.schemaDir}" if:set="hasSchema" xmlns:if="ant:if"/>
                               <scp todir="${upload.schemaDir}" keyfile="${upload.keyFile}" verbose="true" compressed="true" if:set="hasSchema" xmlns:if="ant:if">
                                  <fileset dir="${project.build.outputDirectory}/schema">
-                                    <include name="*-${infinispan.core.schema.version}.xsd" />
+                                    <include name="*-${infinispan.core.schema.version}.xsd"/>
                                  </fileset>
                               </scp>
                            </target>
@@ -5493,9 +5492,7 @@
                            <target>
                                  <available file="${project.build.directory}/classes" type="dir" property="hasClasses"/>
                                  <echo message="Copying test classes to jacoco folder" if:set="hasClasses" xmlns:if="ant:if"/>
-                                 <copydir dest="${jacoco.reportPath}/classes"
-                                          src="${project.build.directory}/classes"
-                                          if:set="hasClasses" xmlns:if="ant:if"/>
+                                 <copydir dest="${jacoco.reportPath}/classes" src="${project.build.directory}/classes" if:set="hasClasses" xmlns:if="ant:if"/>
                            </target>
                         </configuration>
                      </execution>
@@ -5548,8 +5545,7 @@
                               <delete dir="${project.build.directory}/classes"/>
                               <echo>Copying the generated classes file to ${project.build.directory}/classes
                               </echo>
-                              <copydir dest="${project.build.directory}/classes"
-                                       src="${jacoco.reportPath}/classes"/>
+                              <copydir dest="${project.build.directory}/classes" src="${jacoco.reportPath}/classes"/>
                            </target>
                         </configuration>
                      </execution>
