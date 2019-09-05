@@ -1,5 +1,7 @@
 package org.infinispan.server.test;
 
+import static org.infinispan.server.test.ContainerUtil.getIpAddressFromContainer;
+
 import java.io.File;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -14,6 +16,8 @@ import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 
+import org.infinispan.client.hotrod.RemoteCacheManager;
+import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
 import org.infinispan.commons.util.Version;
 import org.infinispan.test.Exceptions;
 import org.infinispan.util.logging.LogFactory;
@@ -36,7 +40,15 @@ import com.github.dockerjava.api.model.Network;
  **/
 public class ContainerInfinispanServerDriver extends InfinispanServerDriver {
    public static final String INFINISPAN_SERVER_HOME = "/opt/infinispan";
+   public static final Integer[] EXPOSED_PORTS = new Integer[] {
+         11222, // Protocol endpoint
+         11221, // Memcached endpoint
+         7800,  // JGroups TCP
+         43366, // JGroups MPING
+         9999   // JMX Remoting
+   };
    private final List<GenericContainer> containers;
+   private final boolean preferContainerExposedPorts = Boolean.valueOf(System.getProperty("org.infinispan.test.server.container.preferContainerExposedPorts", "false"));
 
    protected ContainerInfinispanServerDriver(InfinispanServerTestConfiguration configuration) {
       super(
@@ -64,39 +76,32 @@ public class ContainerInfinispanServerDriver extends InfinispanServerDriver {
             .withFileFromPath("test", rootDir.toPath())
             .withFileFromPath("target", serverOutputDir.getParent())
             .withFileFromPath("src", serverOutputDir.getParent().getParent().resolve("src"))
-            .withDockerfileFromBuilder(builder ->
-                  builder
-                        .from(baseImageName)
-                        .env("INFINISPAN_SERVER_HOME", INFINISPAN_SERVER_HOME)
-                        .env("INFINISPAN_VERSION", Version.getVersion())
-                        .label("name", "Infinispan Server")
-                        .label("version", Version.getVersion())
-                        .label("release", Version.getVersion())
-                        .label("architecture", "x86_64")
-                        .user("jboss")
-                        .copy("build", INFINISPAN_SERVER_HOME)
-                        .copy("test", INFINISPAN_SERVER_HOME + "/server")
-                        .copy("src/test/resources/bin", INFINISPAN_SERVER_HOME + "/bin")
-                        .workDir(INFINISPAN_SERVER_HOME)
-                        .cmd(
-                              "bin/server.sh",
-                              "-c", configurationFile,
-                              "-b", "SITE_LOCAL",
-                              "-Djgroups.tcp.address=SITE_LOCAL",
-                              "-Dinfinispan.cluster.name=" + name,
-                              "-D" + TEST_HOST_ADDRESS + "=" + testHostAddress.getHostName(),
-                              "-Dcom.sun.management.jmxremote.port=9999",
-                              "-Dcom.sun.management.jmxremote.authenticate=false",
-                              "-Dcom.sun.management.jmxremote.ssl=false"
-                        )
-                        .expose(
-                              11222, // Protocol endpoint
-                              11221, // Memcached endpoint
-                              7800,  // JGroups TCP
-                              43366, // JGroups MPING
-                              9999   // JMX Remoting
-                        )
-                        .build());
+            .withDockerfileFromBuilder(builder -> {
+               builder
+                     .from(baseImageName)
+                     .env("INFINISPAN_SERVER_HOME", INFINISPAN_SERVER_HOME)
+                     .env("INFINISPAN_VERSION", Version.getVersion())
+                     .label("name", "Infinispan Server")
+                     .label("version", Version.getVersion())
+                     .label("release", Version.getVersion())
+                     .label("architecture", "x86_64")
+                     .user("jboss")
+                     .copy("build", INFINISPAN_SERVER_HOME)
+                     .copy("test", INFINISPAN_SERVER_HOME + "/server")
+                     .copy("src/test/resources/bin", INFINISPAN_SERVER_HOME + "/bin")
+                     .workDir(INFINISPAN_SERVER_HOME)
+                     .cmd(
+                           "bin/server.sh",
+                           "-c", configurationFile,
+                           "-b", "SITE_LOCAL",
+                           "-Djgroups.tcp.address=SITE_LOCAL",
+                           "-Dinfinispan.cluster.name=" + name,
+                           "-D" + TEST_HOST_ADDRESS + "=" + testHostAddress.getHostName(),
+                           "-Dcom.sun.management.jmxremote.port=9999",
+                           "-Dcom.sun.management.jmxremote.authenticate=false",
+                           "-Dcom.sun.management.jmxremote.ssl=false"
+                     ).expose(EXPOSED_PORTS).build();
+            });
       CountdownLatchLoggingConsumer latch;
       if (configuration.numServers() > 1) {
          latch = new CountdownLatchLoggingConsumer(configuration.numServers(), ".*ISPN080001.*");
@@ -105,7 +110,7 @@ public class ContainerInfinispanServerDriver extends InfinispanServerDriver {
       }
       for (int i = 0; i < configuration.numServers(); i++) {
          GenericContainer container = new GenericContainer(image);
-
+         withContainerExposedPort(container);
          // Create directories which we will bind the container to
          createServerHierarchy(rootDir, Integer.toString(i),
                (hostDir, dir) -> {
@@ -123,6 +128,12 @@ public class ContainerInfinispanServerDriver extends InfinispanServerDriver {
       Exceptions.unchecked(() -> latch.await(10, TimeUnit.SECONDS));
    }
 
+   protected void withContainerExposedPort(GenericContainer container) {
+      if (preferContainerExposedPorts) {
+         container.withExposedPorts(EXPOSED_PORTS);
+      }
+   }
+
    @Override
    protected void stop() {
       for (GenericContainer container : containers) {
@@ -134,11 +145,15 @@ public class ContainerInfinispanServerDriver extends InfinispanServerDriver {
    @Override
    public InetSocketAddress getServerAddress(int server, int port) {
       GenericContainer container = containers.get(server);
-      InspectContainerResponse containerInfo = container.getContainerInfo();
-      ContainerNetwork network = containerInfo.getNetworkSettings().getNetworks().values().iterator().next();
-      // We talk directly to the container, and not through forwarded addresses on localhost because of
-      // https://github.com/testcontainers/testcontainers-java/issues/452
-      return new InetSocketAddress(network.getIpAddress(), port);
+      if (preferContainerExposedPorts) {
+         return new InetSocketAddress("localhost", container.getMappedPort(port));
+      } else {
+         InspectContainerResponse containerInfo = container.getContainerInfo();
+         ContainerNetwork network = containerInfo.getNetworkSettings().getNetworks().values().iterator().next();
+         // We talk directly to the container, and not through forwarded addresses on localhost because of
+         // https://github.com/testcontainers/testcontainers-java/issues/452
+         return new InetSocketAddress(getIpAddressFromContainer(container), port);
+      }
    }
 
    @Override
@@ -171,5 +186,10 @@ public class ContainerInfinispanServerDriver extends InfinispanServerDriver {
          JMXConnector jmxConnector = JMXConnectorFactory.connect(url);
          return jmxConnector.getMBeanServerConnection();
       });
+   }
+
+   @Override
+   public RemoteCacheManager createRemoteCacheManager(ConfigurationBuilder builder) {
+      return new ContainerRemoteCacheManager(containers).wrap(builder);
    }
 }
