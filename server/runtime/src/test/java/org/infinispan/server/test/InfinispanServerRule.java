@@ -101,7 +101,7 @@ public class InfinispanServerRule implements TestRule {
          InetSocketAddress serverAddress = serverDriver.getServerAddress(i, 11222);
          builder.addServer().host(serverAddress.getHostName()).port(serverAddress.getPort());
       }
-      RemoteCacheManager remoteCacheManager = new RemoteCacheManager(builder.build());
+      RemoteCacheManager remoteCacheManager = serverDriver.createRemoteCacheManager(builder);
       return remoteCacheManager;
    }
 
@@ -113,7 +113,7 @@ public class InfinispanServerRule implements TestRule {
       // Add all known server addresses
       for (int i = 0; i < serverDriver.configuration.numServers(); i++) {
          InetSocketAddress serverAddress = serverDriver.getServerAddress(i, 11222);
-         builder.addServer().host(serverAddress.getHostName()).port(serverAddress.getPort());
+         builder.addServer().host("localhost").port(serverAddress.getPort());
       }
       return RestClient.forConfiguration(builder.build());
    }

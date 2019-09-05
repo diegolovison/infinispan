@@ -3,9 +3,11 @@ package org.infinispan.server.test;
 import java.io.File;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -14,6 +16,9 @@ import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 
+import org.infinispan.client.hotrod.RemoteCacheManager;
+import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
+import org.infinispan.client.hotrod.impl.transport.netty.ChannelFactory;
 import org.infinispan.commons.util.Version;
 import org.infinispan.test.Exceptions;
 import org.infinispan.util.logging.LogFactory;
@@ -89,13 +94,6 @@ public class ContainerInfinispanServerDriver extends InfinispanServerDriver {
                               "-Dcom.sun.management.jmxremote.authenticate=false",
                               "-Dcom.sun.management.jmxremote.ssl=false"
                         )
-                        .expose(
-                              11222, // Protocol endpoint
-                              11221, // Memcached endpoint
-                              7800,  // JGroups TCP
-                              43366, // JGroups MPING
-                              9999   // JMX Remoting
-                        )
                         .build());
       CountdownLatchLoggingConsumer latch;
       if (configuration.numServers() > 1) {
@@ -105,6 +103,7 @@ public class ContainerInfinispanServerDriver extends InfinispanServerDriver {
       }
       for (int i = 0; i < configuration.numServers(); i++) {
          GenericContainer container = new GenericContainer(image);
+         container.withExposedPorts(11222);
 
          // Create directories which we will bind the container to
          createServerHierarchy(rootDir, Integer.toString(i),
@@ -134,11 +133,16 @@ public class ContainerInfinispanServerDriver extends InfinispanServerDriver {
    @Override
    public InetSocketAddress getServerAddress(int server, int port) {
       GenericContainer container = containers.get(server);
+      //return new InetSocketAddress(getIpAddressFromContainer(container), port);
+      return new InetSocketAddress("localhost", container.getMappedPort(port));
+   }
+
+   private String getIpAddressFromContainer(GenericContainer container) {
       InspectContainerResponse containerInfo = container.getContainerInfo();
       ContainerNetwork network = containerInfo.getNetworkSettings().getNetworks().values().iterator().next();
       // We talk directly to the container, and not through forwarded addresses on localhost because of
       // https://github.com/testcontainers/testcontainers-java/issues/452
-      return new InetSocketAddress(network.getIpAddress(), port);
+      return network.getIpAddress();
    }
 
    @Override
@@ -171,5 +175,35 @@ public class ContainerInfinispanServerDriver extends InfinispanServerDriver {
          JMXConnector jmxConnector = JMXConnectorFactory.connect(url);
          return jmxConnector.getMBeanServerConnection();
       });
+   }
+
+   @Override
+   public RemoteCacheManager createRemoteCacheManager(ConfigurationBuilder builder) {
+      return new RemoteCacheManager(builder.build()) {
+         @Override
+         public ChannelFactory createChannelFactory() {
+            return new ChannelFactory() {
+               protected Collection<SocketAddress> updateTopologyInfo(byte[] cacheName, Collection<SocketAddress> newServers, boolean quiet) {
+                  List<SocketAddress> localHostServers = new ArrayList<>();
+                  for (SocketAddress address : newServers) {
+                     InetSocketAddress inetSocketAddress = (InetSocketAddress) address;
+                     GenericContainer container = getGeneriContainerBy(inetSocketAddress);
+                     localHostServers.add(new InetSocketAddress("localhost", container.getMappedPort(inetSocketAddress.getPort())));
+                  }
+                  return super.updateTopologyInfo(cacheName, localHostServers, quiet);
+               }
+            };
+         }
+      };
+   }
+
+   private GenericContainer getGeneriContainerBy(InetSocketAddress inetSocketAddress) {
+      for (GenericContainer container : containers) {
+         String hostName = getIpAddressFromContainer(container);
+         if (inetSocketAddress.getHostName().equals(hostName)) {
+            return container;
+         }
+      }
+      throw new IllegalStateException();
    }
 }

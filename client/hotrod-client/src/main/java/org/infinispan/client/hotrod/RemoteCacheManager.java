@@ -302,7 +302,7 @@ public class RemoteCacheManager implements RemoteCacheContainer, Closeable, Remo
 
    private void actualStart() {
       log.debugf("Starting remote cache manager %x", System.identityHashCode(this));
-      channelFactory = new ChannelFactory();
+      channelFactory = createChannelFactory();
 
       if (marshaller == null) {
          marshaller = configuration.marshaller();
@@ -352,6 +352,10 @@ public class RemoteCacheManager implements RemoteCacheContainer, Closeable, Remo
       warnAboutUberJarDuplicates();
 
       started = true;
+   }
+
+   public ChannelFactory createChannelFactory() {
+      return new ChannelFactory();
    }
 
    @Override
