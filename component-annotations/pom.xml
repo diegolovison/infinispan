@@ -22,7 +22,8 @@
             <artifactId>maven-compiler-plugin</artifactId>
             <version>${version.maven-compiler-plugin}</version>
             <configuration>
-               <release>8</release>
+               <source>${version.java}</source>
+               <target>${version.java}</target>
                <encoding>UTF-8</encoding>
                <excludes>
                   <exclude>**/package-info.java</exclude>
