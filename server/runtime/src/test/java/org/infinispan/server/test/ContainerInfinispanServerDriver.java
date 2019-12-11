@@ -35,6 +35,7 @@ import org.testcontainers.containers.Container;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.images.builder.ImageFromDockerfile;
+import org.testcontainers.utility.Base58;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.model.ContainerNetwork;
@@ -56,7 +57,9 @@ public class ContainerInfinispanServerDriver extends InfinispanServerDriver {
    CountdownLatchLoggingConsumer latch;
    ImageFromDockerfile image;
    private File rootDir;
+
    private final boolean preferContainerExposedPorts = Boolean.getBoolean("org.infinispan.test.server.container.preferContainerExposedPorts");
+   private final boolean deleteImageOnExit = Boolean.getBoolean("org.infinispan.test.server.container.deleteImageOnExit");
 
    protected ContainerInfinispanServerDriver(InfinispanServerTestConfiguration configuration) {
       super(
@@ -102,7 +105,7 @@ public class ContainerInfinispanServerDriver extends InfinispanServerDriver {
       properties.setProperty(TEST_HOST_ADDRESS, testHostAddress.getHostName());
       configuration.properties().forEach((k, v) -> args.add("-D" + k + "=" + StringPropertyReplacer.replaceProperties((String) v, properties)));
 
-      image = new ImageFromDockerfile()
+      image = new ImageFromDockerfile("testcontainers/" + Base58.randomString(16).toLowerCase(), deleteImageOnExit)
             .withFileFromPath("build", serverOutputDir)
             .withFileFromPath("test", rootDir.toPath())
             .withFileFromPath("target", serverOutputDir.getParent())
