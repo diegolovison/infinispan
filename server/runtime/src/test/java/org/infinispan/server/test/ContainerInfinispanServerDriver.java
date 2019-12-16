@@ -142,7 +142,7 @@ public class ContainerInfinispanServerDriver extends InfinispanServerDriver {
          log.infof("Starting container %s-%d", name, i);
          container.start();
       }
-      Exceptions.unchecked(() -> latch.await(10, TimeUnit.SECONDS));
+      Exceptions.unchecked(() -> latch.await(120, TimeUnit.SECONDS));
    }
 
    private GenericContainer createContainer(int i, File rootDir) {
