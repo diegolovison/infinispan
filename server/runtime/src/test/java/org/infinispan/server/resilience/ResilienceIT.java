@@ -47,11 +47,11 @@ public class ResilienceIT {
       Eventually.eventually("Cluster should have 1 node", () -> {
          cache.get("k1");
          return cache.getCacheTopologyInfo().getSegmentsPerServer().size() == 1;
-      }, 30, 1, TimeUnit.SECONDS);
+      }, 60, 1, TimeUnit.SECONDS);
       SERVERS.getServerDriver().resume(0);
       Eventually.eventually("Cluster should have 2 nodes", () -> {
          cache.get("k1");
          return cache.getCacheTopologyInfo().getSegmentsPerServer().size() == 2;
-      }, 30, 1, TimeUnit.SECONDS);
+      }, 60, 1, TimeUnit.SECONDS);
    }
 }
