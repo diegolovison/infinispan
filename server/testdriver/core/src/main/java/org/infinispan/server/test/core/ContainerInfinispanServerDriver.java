@@ -42,8 +42,10 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.jboss.shrinkwrap.resolver.api.maven.Maven;
 import org.jboss.shrinkwrap.resolver.api.maven.MavenResolvedArtifact;
 import org.testcontainers.DockerClientFactory;
+import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.Container;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.SelinuxContext;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.utility.Base58;
@@ -126,10 +128,11 @@ public class ContainerInfinispanServerDriver extends AbstractInfinispanServerDri
       if (baseImageName == null) {
          String serverOutputDir = configuration.properties().getProperty(TestSystemPropertyNames.INFINISPAN_TEST_SERVER_DIR);
          if (serverOutputDir == null) {
+            throw new IllegalStateException("We would like to have the image from the source");
             // We try to use the latest public image for this major.minor version
-            imageName = "infinispan/server:" + Version.getMajorMinor();
-            prebuiltImage = true;
-            log.infof("Using prebuilt image '%s'", imageName);
+            //imageName = "infinispan/server:" + Version.getMajorMinor();
+            //prebuiltImage = true;
+            //log.infof("Using prebuilt image '%s'", imageName);
          } else {
             // We build our local image based on the supplied server
             Path serverOutputPath = Paths.get(serverOutputDir).normalize();
@@ -245,7 +248,7 @@ public class ContainerInfinispanServerDriver extends AbstractInfinispanServerDri
                if ("lib".equals(dir)) {
                   copyArtifactsToUserLibDir(hostDir);
                }
-               container.withFileSystemBind(hostDir.getAbsolutePath(), containerDir);
+               container.addFileSystemBind(hostDir.getAbsolutePath(), containerDir, BindMode.READ_WRITE, SelinuxContext.SHARED);
             });
       // Process any enhancers
       container
