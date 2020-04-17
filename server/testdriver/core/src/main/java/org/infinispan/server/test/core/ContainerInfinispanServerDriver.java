@@ -5,18 +5,14 @@ import static org.infinispan.server.test.core.ContainerUtil.getIpAddressFromCont
 import java.io.File;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
-import java.util.Scanner;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
@@ -29,10 +25,8 @@ import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
 import org.infinispan.commons.logging.Log;
 import org.infinispan.commons.test.CommonsTestingUtil;
-import org.infinispan.commons.test.Eventually;
 import org.infinispan.commons.test.Exceptions;
 import org.infinispan.commons.test.ThreadLeakChecker;
-import org.infinispan.commons.test.skip.OS;
 import org.infinispan.commons.util.StringPropertyReplacer;
 import org.infinispan.commons.util.Version;
 import org.infinispan.server.Server;
@@ -42,7 +36,6 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.jboss.shrinkwrap.resolver.api.maven.Maven;
 import org.jboss.shrinkwrap.resolver.api.maven.MavenResolvedArtifact;
 import org.testcontainers.DockerClientFactory;
-import org.testcontainers.containers.Container;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.images.builder.ImageFromDockerfile;
@@ -50,6 +43,8 @@ import org.testcontainers.utility.Base58;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.model.ContainerNetwork;
+import com.github.dockerjava.api.model.Mount;
+import com.github.dockerjava.api.model.MountType;
 import com.github.dockerjava.api.model.Network;
 
 /**
@@ -69,7 +64,6 @@ public class ContainerInfinispanServerDriver extends AbstractInfinispanServerDri
    private String name;
    CountdownLatchLoggingConsumer latch;
    ImageFromDockerfile image;
-   private File rootDir;
 
    protected ContainerInfinispanServerDriver(InfinispanServerTestConfiguration configuration) {
       super(
@@ -90,7 +84,6 @@ public class ContainerInfinispanServerDriver extends AbstractInfinispanServerDri
    @Override
    protected void start(String name, File rootDir, String configurationFile) {
       this.name = name;
-      this.rootDir = rootDir;
       // Build a skeleton server layout
       createServerHierarchy(rootDir);
       // Build the command-line that launches the server
@@ -116,10 +109,14 @@ public class ContainerInfinispanServerDriver extends AbstractInfinispanServerDri
       boolean preserveImageAfterTest = Boolean.parseBoolean(configuration.properties().getProperty(TestSystemPropertyNames.INFINISPAN_TEST_SERVER_PRESERVE_IMAGE, "false"));
       Path tmp = Paths.get(CommonsTestingUtil.tmpDirectory(this.getClass()));
 
+      File libDir = new File(rootDir, "lib");
+      libDir.mkdirs();
+      copyArtifactsToUserLibDir(libDir);
+
       image = new ImageFromDockerfile("testcontainers/" + Base58.randomString(16).toLowerCase(), !preserveImageAfterTest)
             .withFileFromPath("test", rootDir.toPath())
-            .withFileFromPath("tmp", tmp);
-
+            .withFileFromPath("tmp", tmp)
+            .withFileFromPath("lib", libDir.toPath());
       final boolean prebuiltImage;
       final String imageName;
       String baseImageName = configuration.properties().getProperty(TestSystemPropertyNames.INFINISPAN_TEST_SERVER_BASE_IMAGE_NAME);
@@ -155,41 +152,10 @@ public class ContainerInfinispanServerDriver extends AbstractInfinispanServerDri
                .label("name", "Infinispan Server")
                .label("version", Version.getVersion())
                .label("release", Version.getVersion())
-               .label("architecture", "x86_64")
-               .user("root");
+               .label("architecture", "x86_64");
 
          if (!prebuiltImage) {
-            if (OS.getCurrentOs() != OS.WINDOWS) {
-               // We need to remap the UID/GID of the jboss user inside the container to the ones of the user outside so that files created on volume mounts have the correct ownership/permissions
-               String uid = runProcess("id", "-u");
-               String gid = runProcess("id", "-g");
-
-               builder
-                     .run("/bin/sh", "-c", "if [ -x \"$(command -v usermod)\" ]; then usermod -u " + uid +" jboss; fi")
-                     .run("/bin/sh", "-c", "if [ -x \"$(command -v groupmod)\" ]; then groupmod -g " + gid + " jboss; fi");
-            }
-            builder
-                  .copy("build", INFINISPAN_SERVER_HOME)
-                  .run("chown", "-R", "jboss:jboss", INFINISPAN_SERVER_HOME)
-                  .user("jboss");
-         }
-         // Copy the resources to a location from where they can be added to the image
-         try {
-            URI overlayUri = ContainerInfinispanServerDriver.class.getResource("/overlay").toURI();
-            if ("jar".equals(overlayUri.getScheme())) {
-               try (FileSystem fileSystem = FileSystems.newFileSystem(overlayUri, Collections.emptyMap())) {
-                  Files.walkFileTree(fileSystem.getPath("/overlay"), new CommonsTestingUtil.CopyFileVisitor(tmp, true, f -> {
-                     f.setExecutable(true, false);
-                  }));
-               }
-            } else {
-               Files.walkFileTree(Paths.get(overlayUri), new CommonsTestingUtil.CopyFileVisitor(tmp, true, f -> {
-                  f.setExecutable(true, false);
-               }));
-            }
-
-         } catch (Exception e) {
-            throw new RuntimeException(e);
+            builder.copy("build", INFINISPAN_SERVER_HOME);
          }
 
          builder.copy("test", INFINISPAN_SERVER_HOME + "/server")
@@ -202,8 +168,14 @@ public class ContainerInfinispanServerDriver extends AbstractInfinispanServerDri
                      7800,  // JGroups TCP
                      46655, // JGroups UDP
                      9999   // JMX Remoting
-               )
-               .build();
+               );
+
+         builder.copy("lib", serverPathFrom("lib"));
+         builder
+               .user("root")
+               .run("chown", "-R", "jboss:0", INFINISPAN_SERVER_HOME)
+               .run("chmod", "-R", "g+rw", INFINISPAN_SERVER_HOME)
+               .user("jboss");
       });
 
       if (configuration.isParallelStartup()) {
@@ -226,32 +198,17 @@ public class ContainerInfinispanServerDriver extends AbstractInfinispanServerDri
       container.start();
    }
 
-   private String runProcess(String... commands) {
-      ProcessBuilder pb = new ProcessBuilder(commands).redirectErrorStream(true);
-      Process p = Exceptions.unchecked(() -> pb.start());
-      try (Scanner scanner = new Scanner(p.getInputStream(), StandardCharsets.UTF_8.name())) {
-         return scanner.useDelimiter("\\n").next();
-      } finally {
-         Exceptions.unchecked(() -> p.waitFor());
-      }
-   }
-
    private GenericContainer createContainer(int i, File rootDir) {
-      GenericContainer container = new GenericContainer(image);
-      // Create directories which we will bind the container to
-      createServerHierarchy(rootDir, Integer.toString(i),
-            (hostDir, dir) -> {
-               String containerDir = String.format("%s/server/%s", INFINISPAN_SERVER_HOME, dir);
-               if ("lib".equals(dir)) {
-                  copyArtifactsToUserLibDir(hostDir);
-               }
-               container.withFileSystemBind(hostDir.getAbsolutePath(), containerDir);
-            });
+
+      String volumeName = UUID.randomUUID().toString();
+      DockerClientFactory.instance().client().createVolumeCmd().withName(volumeName).exec();
+
+      GenericContainer container = new GenericContainer<>(image)
+         .withCreateContainerCmdModifier(cmd -> cmd.getHostConfig().withMounts(
+            Arrays.asList(new Mount().withSource(volumeName).withTarget(serverPathFrom("data")).withType(MountType.VOLUME))
+         ));
       // Process any enhancers
-      container
-            .withLogConsumer(new JBossLoggingConsumer(LogFactory.getLogger(name)).withPrefix(Integer.toString(i)))
-            .withLogConsumer(latch)
-            .waitingFor(Wait.forListeningPort());
+      withLogConsumer(container, i);
       return container;
    }
 
@@ -311,34 +268,26 @@ public class ContainerInfinispanServerDriver extends AbstractInfinispanServerDri
 
    @Override
    public void pause(int server) {
-      Container.ExecResult result = Exceptions.unchecked(() -> containers.get(server).execInContainer(INFINISPAN_SERVER_HOME + "/bin/pause.sh"));
-      System.out.printf("[%d] PAUSE %s\n", server, result);
+      DockerClientFactory.instance().client().pauseContainerCmd(containers.get(server).getContainerId()).exec();
+      System.out.printf("[%d] PAUSE \n", server);
    }
 
    @Override
    public void resume(int server) {
-      Container.ExecResult result = Exceptions.unchecked(() -> containers.get(server).execInContainer(INFINISPAN_SERVER_HOME + "/bin/resume.sh"));
-      System.out.printf("[%d] RESUME %s\n", server, result);
+      DockerClientFactory.instance().client().unpauseContainerCmd(containers.get(server).getContainerId()).exec();
+      System.out.printf("[%d] RESUME \n", server);
    }
 
    @Override
    public void stop(int server) {
       containers.get(server).stop();
+      System.out.printf("[%d] STOP \n", server);
    }
 
    @Override
    public void kill(int server) {
-      Exceptions.unchecked(() -> containers.get(server).execInContainer(INFINISPAN_SERVER_HOME + "/bin/kill.sh"));
-   }
-
-   // TODO should this just replace stop?
-   public void sigterm(int server) {
-      GenericContainer container = containers.get(server);
-      CountdownLatchLoggingConsumer latch = new CountdownLatchLoggingConsumer(1, SHUTDOWN_MESSAGE_REGEX);
-      container.withLogConsumer(latch);
-      Container.ExecResult result = Exceptions.unchecked(() -> container.execInContainer(INFINISPAN_SERVER_HOME + "/bin/term.sh"));
-      System.out.printf("[%d] TERM %s\n", server, result);
-      Eventually.eventually(() -> !container.isRunning());
+      DockerClientFactory.instance().client().killContainerCmd(containers.get(server).getContainerId()).exec();
+      System.out.printf("[%d] KILL \n", server);
    }
 
    @Override
@@ -347,10 +296,7 @@ public class ContainerInfinispanServerDriver extends AbstractInfinispanServerDri
          throw new IllegalStateException("Server " + server + " is still running");
       }
       latch = new CountdownLatchLoggingConsumer(1, STARTUP_MESSAGE_REGEX);
-      GenericContainer container = createContainer(server, rootDir);
-      containers.set(server, container);
-      log.infof("Restarting container %s-%d", name, server);
-      container.start();
+      restartContainer(containers.get(server), server);
       Exceptions.unchecked(() -> latch.await(TIMEOUT_SECONDS, TimeUnit.SECONDS));
    }
 
@@ -358,10 +304,7 @@ public class ContainerInfinispanServerDriver extends AbstractInfinispanServerDri
    public void restartCluster() {
       latch = new CountdownLatchLoggingConsumer(configuration.numServers(), STARTUP_MESSAGE_REGEX);
       for (int i = 0; i < configuration.numServers(); i++) {
-         GenericContainer container = createContainer(i, rootDir);
-         containers.set(i, container);
-         log.infof("Restarting container %s-%d", name, i);
-         container.start();
+         restartContainer(containers.get(i), i);
       }
       Exceptions.unchecked(() -> latch.await(TIMEOUT_SECONDS, TimeUnit.SECONDS));
    }
@@ -395,5 +338,26 @@ public class ContainerInfinispanServerDriver extends AbstractInfinispanServerDri
    @Override
    public int getTimeout() {
       return TIMEOUT_SECONDS;
+   }
+
+   private void restartContainer(GenericContainer container, int server) {
+      log.infof("Restarting container %s-%d", name, server);
+      // We can stop the server by doing a rest call. TestContainers doesn't support start a container with a running state
+      container.stop();
+      // append the log consumer again
+      withLogConsumer(container, server);
+      // start it back
+      container.start();
+   }
+
+   private String serverPathFrom(String path) {
+      return String.format("%s/server/%s", INFINISPAN_SERVER_HOME, path);
+   }
+
+   private void withLogConsumer(GenericContainer container, int i) {
+      container
+            .withLogConsumer(new JBossLoggingConsumer(LogFactory.getLogger(name)).withPrefix(Integer.toString(i)))
+            .withLogConsumer(latch)
+            .waitingFor(Wait.forListeningPort());
    }
 }
