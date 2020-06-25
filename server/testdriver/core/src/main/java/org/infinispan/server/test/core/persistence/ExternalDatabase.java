@@ -20,4 +20,14 @@ public class ExternalDatabase extends Database {
    public void stop() {
       // Do nothing
    }
+
+   @Override
+   public String getDatabaseInformation() {
+      return null;
+   }
+
+   @Override
+   public boolean isRunning() {
+      return false;
+   }
 }

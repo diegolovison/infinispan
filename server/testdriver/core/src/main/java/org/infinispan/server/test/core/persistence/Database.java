@@ -71,4 +71,8 @@ public abstract class Database {
    public abstract void start();
 
    public abstract void stop();
+
+   public abstract String getDatabaseInformation();
+
+   public abstract boolean isRunning();
 }

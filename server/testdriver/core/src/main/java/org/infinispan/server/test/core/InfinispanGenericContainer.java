@@ -21,8 +21,12 @@ public class InfinispanGenericContainer {
    private String containerId;
 
    public InfinispanGenericContainer(GenericContainer genericContainer) {
-      this.containerId = genericContainer.getContainerId();
       this.genericContainer = genericContainer;
+   }
+
+   public void start() {
+      this.genericContainer.start();
+      this.containerId = genericContainer.getContainerId();
    }
 
    public void pause() {
@@ -79,9 +83,11 @@ public class InfinispanGenericContainer {
    }
 
    public InspectContainerResponse containerInfo() {
-      InspectContainerResponse containerInfo;
+      InspectContainerResponse containerInfo = null;
       try {
-         containerInfo = dockerClient().inspectContainerCmd(this.containerId).exec();
+         if (this.containerId != null) {
+            containerInfo = dockerClient().inspectContainerCmd(this.containerId).exec();
+         }
       } catch (NotFoundException e) { // the container could be removed or not available
          containerInfo = null;
       }
@@ -102,5 +108,9 @@ public class InfinispanGenericContainer {
 
    private DockerClient dockerClient() {
       return DockerClientFactory.instance().client();
+   }
+
+   public String getDockerImageName() {
+      return genericContainer.getDockerImageName();
    }
 }

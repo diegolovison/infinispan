@@ -38,9 +38,12 @@ public class DatabaseServerListener implements InfinispanServerListener {
       databases = new LinkedHashMap<>(databaseTypes.length);
       for (String dbType : databaseTypes) {
          Database database = initDatabase(dbType);
-         log.infof("Starting database: %s", database.getType());
+         log.infof("Starting database: %s", dbType);
          database.start();
-         log.infof("Started database: %s", database.getType());
+         if (!database.isRunning()) {
+            throw new IllegalStateException("Picles");
+         }
+         log.infof("Started database: %s", database.getDatabaseInformation());
          if (databases.putIfAbsent(dbType, database) != null) {
             throw new RuntimeException("Duplicate database type " + dbType);
          }
@@ -50,9 +53,12 @@ public class DatabaseServerListener implements InfinispanServerListener {
 
    @Override
    public void after(InfinispanServerDriver driver) {
-      log.info("Stopping databases");
-      databases.values().forEach(Database::stop);
-      log.info("Stopped databases");
+      for (String dbType : databaseTypes) {
+         Database database = initDatabase(dbType);
+         log.infof("Stopping database: %s", dbType);
+         database.stop();
+         log.infof("Stopped database: %s", dbType);
+      }
    }
 
    public Database getDatabase(String databaseType) {
