@@ -296,8 +296,8 @@ public class ContainerInfinispanServerDriver extends AbstractInfinispanServerDri
          container.withLogConsumer(consumer);
 
       log.infof("Starting container %d", i);
-      container.start();
       containers[i] = new InfinispanGenericContainer(container);
+      containers[i].start();
       log.infof("Started container %d", i);
       return container;
    }

@@ -21,7 +21,6 @@ public class InfinispanGenericContainer {
    private String containerId;
 
    public InfinispanGenericContainer(GenericContainer genericContainer) {
-      this.containerId = genericContainer.getContainerId();
       this.genericContainer = genericContainer;
    }
 
@@ -38,6 +37,11 @@ public class InfinispanGenericContainer {
       if (isRunning()) {
          dockerClient().stopContainerCmd(this.containerId).exec();
       }
+   }
+
+   public void start() {
+      this.genericContainer.start();
+      this.containerId = this.genericContainer.getContainerId();
    }
 
    public void kill() {

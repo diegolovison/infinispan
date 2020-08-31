@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.infinispan.commons.logging.Log;
 import org.infinispan.commons.logging.LogFactory;
 import org.infinispan.commons.util.StringPropertyReplacer;
+import org.infinispan.server.test.core.InfinispanGenericContainer;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.images.builder.ImageFromDockerfile;
@@ -18,7 +19,7 @@ import org.testcontainers.images.builder.ImageFromDockerfile;
 public class ContainerDatabase extends Database {
    private final static Log log = LogFactory.getLog(ContainerDatabase.class);
    private final static String ENV_PREFIX = "database.container.env.";
-   private final GenericContainer container;
+   private final InfinispanGenericContainer container;
    private final int port;
 
    ContainerDatabase(String type, Properties properties) {
@@ -34,7 +35,7 @@ public class ContainerDatabase extends Database {
                      .env(env)
                      .build();
             });
-      container = new GenericContainer(image).withExposedPorts(port).waitingFor(Wait.forListeningPort());
+      container = new InfinispanGenericContainer(new GenericContainer(image).withExposedPorts(port).waitingFor(Wait.forListeningPort()));
    }
 
    @Override
@@ -56,7 +57,7 @@ public class ContainerDatabase extends Database {
 
    @Override
    public String jdbcUrl() {
-      String address = container.getContainerInfo().getNetworkSettings().getNetworks().values().iterator().next().getIpAddress();
+      String address = container.getNetworkIpAddress();
       Properties props = new Properties();
       props.setProperty("container.address", address);
       return StringPropertyReplacer.replaceProperties(super.jdbcUrl(), props);
