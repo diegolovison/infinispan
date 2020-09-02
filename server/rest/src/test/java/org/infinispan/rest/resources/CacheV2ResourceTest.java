@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -130,7 +131,7 @@ public class CacheV2ResourceTest extends AbstractRestResourceTest {
    }
 
    @Test
-   public void testCreateCacheEncodedName() {
+   public void testCreateCacheEncodedName() throws ExecutionException, InterruptedException {
       testCreateAndUseCache("a/");
       testCreateAndUseCache("a/b/c");
       testCreateAndUseCache("a-b-c");
@@ -155,12 +156,14 @@ public class CacheV2ResourceTest extends AbstractRestResourceTest {
       assertEquals(TEXT_PLAIN_TYPE, valueMediaType.asString());
    }
 
-   private void testCreateAndUseCache(String name) {
+   private void testCreateAndUseCache(String name) throws ExecutionException, InterruptedException {
       String cacheConfig = "{\"distributed-cache\":{\"mode\":\"SYNC\"}}";
 
       RestCacheClient cacheClient = client.cache(name);
       RestEntity config = RestEntity.create(APPLICATION_JSON, cacheConfig);
       CompletionStage<RestResponse> response = cacheClient.createWithConfiguration(config);
+
+      System.out.println(String.format("response: %s", response.toCompletableFuture().get().getBody()));
 
       ResponseAssertion.assertThat(response).isOk();
 
