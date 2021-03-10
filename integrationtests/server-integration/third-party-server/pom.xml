@@ -191,7 +191,7 @@
             </activation>
             <properties>
                 <infinispan.server.integration.launch>wildfly</infinispan.server.integration.launch>
-                <jbossHome>${project.build.directory}/wildfly-${version.wildfly}</jbossHome>
+                <jbossHome>${project.build.directory}/node1</jbossHome>
                 <infinispan.server.integration.data-source>java:jboss/datasources/ExampleDS</infinispan.server.integration.data-source>
             </properties>
             <dependencies>
@@ -203,15 +203,15 @@
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-dependency-plugin</artifactId>
+                        <groupId>org.wildfly.build</groupId>
+                        <artifactId>wildfly-server-provisioning-maven-plugin</artifactId>
                         <executions>
                             <execution>
-                                <id>unpack</id>
-                                <phase>pre-integration-test</phase>
+                                <id>server-provisioning-node1</id>
                                 <goals>
-                                    <goal>unpack</goal>
+                                    <goal>build</goal>
                                 </goals>
+                                <phase>pre-integration-test</phase>
                                 <configuration>
                                     <skip>${skipTests}</skip>
                                     <artifactItems>
