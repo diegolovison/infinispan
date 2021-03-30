@@ -86,8 +86,14 @@
                 <configuration>
                     <systemPropertyVariables>
                         <arquillian.launch>${infinispan.server.integration.launch}</arquillian.launch>
-                        <catalinaHome>${catalinaHome}</catalinaHome>
-                        <jbossHome>${jbossHome}</jbossHome>
+                        <catalinaHome1>${catalinaHome1}</catalinaHome1>
+                        <catalinaHome2>${catalinaHome2}</catalinaHome2>
+                        <catalinaBindHttpPort1>${catalinaBindHttpPort1}</catalinaBindHttpPort1>
+                        <catalinaBindHttpPort2>${catalinaBindHttpPort2}</catalinaBindHttpPort2>
+                        <catalinaJmxPort1>${catalinaJmxPort1}</catalinaJmxPort1>
+                        <catalinaJmxPort2>${catalinaJmxPort2}</catalinaJmxPort2>
+                        <jbossHome1>${jbossHome1}</jbossHome1>
+                        <jbossHome2>${jbossHome2}</jbossHome2>
                         <server.jvm>${server.jvm}</server.jvm>
                         <infinispan.server.integration.data-source>${infinispan.server.integration.data-source}</infinispan.server.integration.data-source>
                     </systemPropertyVariables>
@@ -133,7 +139,14 @@
             </activation>
             <properties>
                 <infinispan.server.integration.launch>tomcat</infinispan.server.integration.launch>
-                <catalinaHome>${project.build.directory}/tomcat</catalinaHome>
+                <baseCatalinaHome>${project.build.directory}/tomcat</baseCatalinaHome>
+                <catalinaHome1>${project.build.directory}/tomcat1</catalinaHome1>
+                <catalinaHome2>${project.build.directory}/tomcat2</catalinaHome2>
+                <catalinaBindHttpPort1>8080</catalinaBindHttpPort1>
+                <catalinaBindHttpPort2>8081</catalinaBindHttpPort2>
+                <catalinaJmxPort1>8089</catalinaJmxPort1>
+                <catalinaJmxPort2>8090</catalinaJmxPort2>
+                <catalinaUnzipExpression>apache-tomcat-*</catalinaUnzipExpression>
                 <infinispan.server.integration.data-source>java:comp/env/datasources/ExampleDS</infinispan.server.integration.data-source>
             </properties>
             <dependencies>
@@ -159,8 +172,33 @@
                                 <configuration>
                                     <skip>${skipTests}</skip>
                                     <target>
-                                        <copy file="${basedir}/src/test/resources/tomcat/tomcat-users.xml" todir="${catalinaHome}/conf" overwrite="true" />
-                                        <copy file="${basedir}/src/test/resources/tomcat/context.xml" todir="${catalinaHome}/conf" overwrite="true" />
+                                        <echo message="unzipping tomcat server" />
+                                        <unzip src="${tomcat.zip}" dest="${baseCatalinaHome}" />
+                                        <pathconvert property="tomcat.unzip.dir">
+                                            <dirset dir="${baseCatalinaHome}" includes="${catalinaUnzipExpression}"/>
+                                        </pathconvert>
+                                        <move todir="${baseCatalinaHome}">
+                                            <fileset dir="${tomcat.unzip.dir}"/>
+                                        </move>
+
+                                        <echo message="copying tomcat server" />
+                                        <delete dir="${catalinaHome1}" />
+                                        <delete dir="${catalinaHome2}" />
+                                        <copydir src="${baseCatalinaHome}" dest="${catalinaHome1}" />
+                                        <copydir src="${baseCatalinaHome}" dest="${catalinaHome2}" />
+                                        <delete dir="${baseCatalinaHome}" />
+
+                                        <echo message="copying configurations" />
+                                        <copy file="${basedir}/src/test/resources/tomcat/tomcat-users.xml" todir="${catalinaHome1}/conf" overwrite="true" />
+                                        <copy file="${basedir}/src/test/resources/tomcat/context.xml" todir="${catalinaHome1}/conf" overwrite="true" />
+                                        <copy file="${basedir}/src/test/resources/tomcat/tomcat-users.xml" todir="${catalinaHome2}/conf" overwrite="true" />
+                                        <copy file="${basedir}/src/test/resources/tomcat/context.xml" todir="${catalinaHome2}/conf" overwrite="true" />
+
+                                        <echo message="replace configurations" />
+                                        <replaceregexp file="${catalinaHome1}/conf/server.xml" match="port=&quot;8080&quot;" replace="port=&quot;${catalinaBindHttpPort1}&quot;" byline="true"/>
+                                        <replaceregexp file="${catalinaHome1}/conf/server.xml" match="port=&quot;8005&quot;" replace="port=&quot;8005&quot;" byline="true"/>
+                                        <replaceregexp file="${catalinaHome2}/conf/server.xml" match="port=&quot;8080&quot;" replace="port=&quot;${catalinaBindHttpPort2}&quot;" byline="true"/>
+                                        <replaceregexp file="${catalinaHome2}/conf/server.xml" match="port=&quot;8005&quot;" replace="port=&quot;8006&quot;" byline="true"/>
                                     </target>
                                 </configuration>
                             </execution>
@@ -181,7 +219,8 @@
             </activation>
             <properties>
                 <infinispan.server.integration.launch>wildfly</infinispan.server.integration.launch>
-                <jbossHome>${project.build.directory}/node1</jbossHome>
+                <jbossHome1>${project.build.directory}/node1</jbossHome1>
+                <jbossHome2>${project.build.directory}/node2</jbossHome2>
                 <infinispan.server.integration.data-source>java:jboss/datasources/ExampleDS</infinispan.server.integration.data-source>
             </properties>
             <dependencies>
@@ -205,6 +244,17 @@
                                 <configuration>
                                     <config-file>../server-integration-commons/server-provisioning.xml</config-file>
                                     <server-name>node1</server-name>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>server-provisioning-node2</id>
+                                <goals>
+                                    <goal>build</goal>
+                                </goals>
+                                <phase>pre-integration-test</phase>
+                                <configuration>
+                                    <config-file>../server-integration-commons/server-provisioning.xml</config-file>
+                                    <server-name>node2</server-name>
                                 </configuration>
                             </execution>
                         </executions>
