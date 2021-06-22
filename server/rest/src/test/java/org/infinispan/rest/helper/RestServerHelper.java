@@ -145,4 +145,8 @@ public class RestServerHelper {
       return RestClient.forConfiguration(builder.build());
    }
 
+   public RestServerHelper withSslProvider(String sslProvider) {
+      restServerConfigurationBuilder.ssl().provider(sslProvider);
+      return this;
+   }
 }

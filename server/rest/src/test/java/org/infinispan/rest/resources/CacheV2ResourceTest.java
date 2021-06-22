@@ -1,8 +1,6 @@
 package org.infinispan.rest.resources;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.infinispan.client.rest.configuration.Protocol.HTTP_11;
-import static org.infinispan.client.rest.configuration.Protocol.HTTP_20;
 import static org.infinispan.commons.api.CacheContainerAdmin.AdminFlag.VOLATILE;
 import static org.infinispan.commons.dataconversion.MediaType.APPLICATION_JSON;
 import static org.infinispan.commons.dataconversion.MediaType.APPLICATION_JSON_TYPE;
@@ -104,12 +102,7 @@ public class CacheV2ResourceTest extends AbstractRestResourceTest {
 
    @Override
    public Object[] factory() {
-      return new Object[]{
-            new CacheV2ResourceTest().withSecurity(false).protocol(HTTP_11).ssl(false),
-            new CacheV2ResourceTest().withSecurity(true).protocol(HTTP_20).ssl(false),
-            new CacheV2ResourceTest().withSecurity(true).protocol(HTTP_11).ssl(true),
-            new CacheV2ResourceTest().withSecurity(true).protocol(HTTP_20).ssl(true),
-      };
+      return testFactory(CacheV2ResourceTest.class);
    }
 
    private ConfigurationBuilder getIndexedPersistedCache() {
