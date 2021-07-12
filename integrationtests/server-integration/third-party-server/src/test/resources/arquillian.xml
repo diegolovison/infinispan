@@ -22,12 +22,16 @@
         <configuration>
             <property name="jbossHome">${jbossHome}</property>
             <property name="javaHome">${server.jvm}</property>
+            <property name="jbossArguments">-secmgr</property>
             <!--
             <property name="javaVmArguments">
                 -agentlib:jdwp=transport=dt_socket,address=8787,server=y,suspend=y
+
+                -Djava.security.debug=all
             </property>
             -->
             <property name="javaVmArguments">
+                -Dsecurity.manager=true
                 -Dinfinispan.server.integration.data-source=${infinispan.server.integration.data-source}
             </property>
         </configuration>

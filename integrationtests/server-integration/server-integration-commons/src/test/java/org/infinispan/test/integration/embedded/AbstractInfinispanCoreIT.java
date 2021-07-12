@@ -1,6 +1,8 @@
 package org.infinispan.test.integration.embedded;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import org.infinispan.Cache;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
@@ -28,10 +30,18 @@ public abstract class AbstractInfinispanCoreIT {
 
    @Test
    public void testCacheManager() {
+      assertTrue("security.manager", Boolean.valueOf(System.getProperty("security.manager")));
+      assertNotNull("manager", System.getSecurityManager());
+
       GlobalConfigurationBuilder gcb = new GlobalConfigurationBuilder();
       gcb.defaultCacheName("default");
 
-      cm = new DefaultCacheManager(gcb.build(), new ConfigurationBuilder().build());
+      ConfigurationBuilder b = new ConfigurationBuilder();
+      b.persistence()
+            .addSingleFileStore()
+            .maxEntries(5000);
+
+      cm = new DefaultCacheManager(gcb.build(), b.build());
       Cache<String, String> cache = cm.getCache();
       cache.put("a", "a");
       assertEquals("a", cache.get("a"));
